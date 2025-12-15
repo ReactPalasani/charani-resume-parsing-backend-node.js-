@@ -7,6 +7,10 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { Readable } = require('stream');
 
+require('./db');
+const Resume = require('./models/Resume');
+
+
 // OpenAI
 const OpenAI = require("openai");
 const openai = new OpenAI({
@@ -113,6 +117,15 @@ app.post('/parse', upload.single('resume'), async (req, res) => {
         raw
       });
     }
+
+    const resumeDoc = new Resume({
+  parsedData: parsed,     // 👈 whole JSON stored
+  rawText: text,
+  workerPid: process.pid
+});
+
+await resumeDoc.save();
+
 
     parsed.worker_pid = process.pid; // 👈 proves cluster
     parsed.raw_text_snippet = text.slice(0, 300);
