@@ -45,9 +45,11 @@ async function extractText(buffer, mimetype) {
 
   // STREAM created from BUFFER
   const stream = bufferToStream(buffer);
+  console.log(`Extracting text from mimetype: ${mimetype,stream}`);
 
   if (mimetype === 'application/pdf') {
-    const parsed = await pdf(stream);
+    console.log('Using PDF parser');
+    const parsed = await pdf(buffer);
     return parsed.text;
   }
 
@@ -70,7 +72,45 @@ async function extractText(buffer, mimetype) {
 function makePrompt(text) {
   return `
 You are a resume parsing assistant.
-Extract candidate details and return ONLY valid JSON.
+Extract candidate details from the resume text.
+Return ONLY valid JSON.
+If any field is missing, return an empty string "" or empty array [].
+Do NOT include explanations or extra text.
+
+Expected JSON format:
+{
+  "candidate": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "summary": "",
+    "education": {
+      "degree": "",
+      "institute": "",
+      "year_of_pass": ""
+    },
+    "technical": {
+      "frontend": [],
+      "backend": [],
+      "database": [],
+      "other": []
+    },
+    "experience": {
+      "company_name": "",
+      "role": "",
+      "duration": "",
+      "projects": [
+        {
+          "project_name": "",
+          "description": ""
+        }
+      ]
+    },
+    "certifications": [],
+    "skills": [],
+    "achievements": []
+  }
+}
 
 Resume:
 """
@@ -78,6 +118,7 @@ ${text}
 """
 `.trim();
 }
+
 
 /* =========================
    API Endpoint
@@ -102,7 +143,7 @@ app.post('/parse', upload.single('resume'), async (req, res) => {
         { role: "user", content: prompt }
       ],
       temperature: 0,
-      max_tokens: 10000
+      max_tokens: 16383
     });
 
     let raw = aiResp.choices[0].message.content.trim();
